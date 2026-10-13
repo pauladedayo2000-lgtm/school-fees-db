@@ -58,3 +58,15 @@ INSERT INTO invoices (student_id, fee_type_id, amount, due_date)
 VALUES (1, 1, 50000, '2026-12-01');
 
 TRUNCATE students, fee_types, invoices, payments, discounts RESTART IDENTITY;
+
+CREATE VIEW invoice_balances AS
+SELECT *, invoice_amount - discount_total - paid_total AS balance
+FROM (
+    SELECT i.invoice_id, i.student_id, i.fee_type_id, i.due_date,
+           i.amount AS invoice_amount,
+           COALESCE((SELECT SUM(d.amount) FROM discounts d
+                     WHERE d.invoice_id = i.invoice_id), 0) AS discount_total,
+           COALESCE((SELECT SUM(p.amount) FROM payments p
+                     WHERE p.invoice_id = i.invoice_id), 0) AS paid_total
+    FROM invoices i
+) t;
